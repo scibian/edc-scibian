@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_test:
+	@echo Checking shell scripts syntax
+	cd $(CURDIR) \
+	find script-scibian.d/ chroot-setup/ fakessh/ schroot/*/config -type f | xargs -n 1 bash -n
+	find $(CURDIR) -maxdepth 1 -type f -executable | xargs -n 1 bash -n
+	@echo Validating packages file format
+	! grep -Ev '^[a-z0-9][a-z0-9+.-]+$$' $(CURDIR)/packages/*
+	$(CURDIR)/devel-pkgman --self-test
+	$(CURDIR)/purger-devel --self-test
+	$(CURDIR)/run-cron --self-test
+	@echo Checking nvidia alternatives existance
+	cd $(CURDIR) ; fail=false ; for pkg in $$(sed -nr \
+		'/^Package:\s*(devel-|compat-)/{s/^.+:\s*//;p}' debian/control); do \
+		if ! [ -f "script-scibian.d/nvidia/$$pkg" ] && \
+		! [ -f "script-scibian.d/nvidia/$${pkg#*-}" ]; then echo NOK: $$pkg ; fail=true ; \
+		fi ; done ; if $$fail; then exit 1; else exit 0; fi

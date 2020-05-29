@@ -1,0 +1,29 @@
+# -*- sh -*-
+
+. "$SETUP_DATA_DIR/common-data"
+
+set -e
+
+if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ] && \
+   ! [ -f "$CHROOT_PATH/edc-bootrap-in-progress" ] && [ "$AUTH_RUSER" != root ]; then
+
+    edc="$(echo "$CHROOT_NAME" | cut -d '-' -f 1,2)"
+    date="$(date --rfc-3339=seconds)"
+    logfile="/var/log/edc-users.log"
+
+    if ! [ -f "$logfile" ]; then
+	(
+	    umask 027
+	    touch "$logfile"
+	)
+    fi
+
+    {
+	flock 9
+	printf '%s %s: %s\n' "$date" "$edc" "$AUTH_RUSER"
+    } 9>> "$logfile" >&9
+
+    unset edc logfile date
+fi
+
+set +e

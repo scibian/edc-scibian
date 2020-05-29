@@ -1,0 +1,10 @@
+#!/bin/sh
+
+COPYFILES="/etc/schroot/compat-scibian8/copyfiles"
+SBUILD="false"
+NSSDATABASES="/etc/schroot/edc/nssdatabases"
+
+for i in /usr/share/edc-scibian/config/compat-scibian8.d/*
+do
+    . $i
+done

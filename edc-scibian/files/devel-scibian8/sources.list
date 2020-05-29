@@ -1,0 +1,8 @@
+#
+# depots pour EDC Scibian8
+#
+deb http://scibian.org/repo/ scibian8 main
+deb http://ftp.fr.debian.org/debian/ jessie main contrib non-free
+deb http://security.debian.org/debian-security jessie/updates main contrib non-free
+deb http://ftp.fr.debian.org/debian/ jessie-updates main contrib non-free
+

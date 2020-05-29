@@ -1,0 +1,6 @@
+schroot/devel-testing                     etc/schroot/
+chroot-setup/devel-testing                usr/share/edc-scibian/chroot-setup/
+packages/devel-testing                    usr/share/edc-scibian/packages/
+script-scibian.d/devel-testing.d/         usr/share/edc-scibian/config/
+desktop/devel-testing.desktop             /usr/share/applications
+icons/terminal-devel-scibian-testing.png  /usr/share/icons/scibian/png

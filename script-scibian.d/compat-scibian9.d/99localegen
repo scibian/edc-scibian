@@ -1,0 +1,34 @@
+# -*- sh -*-
+
+set -e
+
+. "$SETUP_DATA_DIR/common-data"
+. "$SETUP_DATA_DIR/common-functions"
+
+if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ]; then
+    info "Configuring locale"
+
+    if [ -z "$CHROOT_PATH" ]; then
+	fatal "CHROOT_PATH is empty, not good"
+    fi
+
+    chroot "$CHROOT_PATH" /bin/sh -c '
+	set -e
+	cache=/var/cache/scibian-localegen
+	if which locale-gen > /dev/null; then
+	    regen=false
+	    if ! [ -f $cache ]; then
+		regen=true
+	    else
+		if ! md5sum -c --strict --status < $cache ; then
+		    regen=true
+		fi
+	    fi
+	    if $regen; then
+		locale-gen
+		md5sum /etc/locale.gen > $cache
+	    fi
+	fi'
+fi
+
+set +e

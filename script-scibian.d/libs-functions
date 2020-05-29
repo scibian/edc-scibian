@@ -1,0 +1,76 @@
+# -*- sh -*-
+
+copy_host_files() {
+    local files="$1" from="$2" to="$3"
+
+    local path
+    for path in $from; do
+	local file
+	for file in $files; do
+	    if [ -f "$path/$file" ]; then
+		cp -a "$(readlink -f "$path/$file")" "$to/$file.next.$$"
+		mv "$to/$file.next.$$" "$to/$file"
+	    fi
+	done
+    done
+}
+
+copy_host_libs() {
+    local libs="$1" from="$2" to="$3" filter="$4"
+
+    local path
+    for path in $from; do
+	local lib
+	for lib in $libs; do
+	    if [ -f "$path/$lib" ]; then
+		local extralib
+		for extralib in $(ldd "$path/$lib" | sed -rn "/$filter/"'{s/^.+=> +([^ ]+) .*$/\1/;p}'); do
+		    local extralib_base
+		    if ! [ -f "$extralib" ]; then
+			fatal "error parsing ldd output for copying '$filter' libs"
+		    fi
+		    extralib_base="$(basename "$extralib")"
+		    cp -a "$extralib" "$to/$extralib_base.next.$$"
+		    mv "$to/$extralib_base.next.$$" "$to/$extralib_base"
+		done
+		cp -a "$(readlink -f "$path/$lib")" "$to/$lib.next.$$"
+		mv "$to/$lib.next.$$" "$to/$lib"
+	    fi
+	done
+    done
+}
+
+create_multiarch_lib_local_path() {
+    chroot "$CHROOT_PATH" /bin/sh -c '
+	set -e
+	# nicely sorted before anything else:
+	conf=/etc/ld.so.conf.d/00-scibian-local.conf
+	if ! [ -f $conf ]; then
+	    for path in /usr/local/lib/x86_64-linux-gnu /usr/local/lib/i386-linux-gnu; do
+		mkdir -p "$path"
+		echo "$path" >> $conf
+	    done
+	fi'
+}
+
+bind_ifexists() {
+    set -u
+    local real_dir bind_dir
+
+    real_dir="$1"
+    # allow one to omit the bind dir, in which case we assume $real_dir is also $bind_dir
+    if [ -z "${2:-}" ]; then
+	bind_dir="$real_dir"
+    else
+	# allow one to call it like: bind_ifexists /moo to /moo-bind
+	if [ "$2" = 'to' ]; then
+	    shift
+	fi
+	bind_dir="$2"
+    fi
+
+    if [ -e "$real_dir" ]; then
+        echo "$real_dir           $bind_dir               none    rw,bind                 0               0"
+    fi
+    set +u
+}

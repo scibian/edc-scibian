@@ -1,0 +1,10 @@
+#
+# Liste des fichiers de l'hôte qui seront synchronisés dans les chroot
+# Pour l'EDC : compat-scibian9
+#
+# "Source Destination" ou "Source" si les deux sont identiques.
+#
+/var/lib/edc-scibian/files/compat-scibian9/sources.list /etc/apt/sources.list
+/var/lib/edc-scibian/files/compat-scibian9/apt-pin /etc/apt/preferences.d/00scibian
+/var/lib/edc-scibian/files/edc-blacklist /etc/apt/preferences.d/zz-edc-blacklist
+/var/lib/dpkg/arch /var/lib/dpkg/arch

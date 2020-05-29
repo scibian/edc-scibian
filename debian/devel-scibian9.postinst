@@ -1,0 +1,19 @@
+#! /bin/sh
+set -e
+
+#DEBHELPER#
+
+EDC_TYPE=devel
+VERSION=scibian9
+DESCRIPTION="$EDC_TYPE Scibian 9"
+DEBIAN_DISTRIBUTION=stretch
+# Installed size + size of downloads
+SPACE_NEEDED=$((5500000+(2*1000*1000)))
+INSTALL_MINUTES=20
+
+export EDC_TYPE VERSION DESCRIPTION DEBIAN_DISTRIBUTION SPACE_NEEDED INSTALL_MINUTES
+
+# Modification temporaire pour résorber le problème apt sur devel-scibian9 (#4148)
+[ -f /etc/cron.daily/devel-scibian9_apt ] && unlink /etc/cron.daily/devel-scibian9_apt
+
+/usr/share/edc-base/installer "$@"

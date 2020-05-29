@@ -1,0 +1,10 @@
+scibian-standard
+scibian-devel
+cups-client
+openssh-client
+scibian-desktop-utils
+ttf-mscorefonts-installer
+xdg-utils
+xterm
+unattended-upgrades
+lynx

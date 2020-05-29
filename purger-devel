@@ -1,0 +1,59 @@
+#!/bin/sh
+
+set -eu
+
+filter_name() {
+    sed -nr 's/^purge-(devel-[a-z0-9]+)$/\1/;T;p;'
+}
+
+if [ "x${1:-}" = "x--self-test" ]; then
+    [ "$(printf purge-devel-foo.bar | filter_name)" = '' ] && printf . || { echo filter_name 2 FAILED; exit 1; }
+    [ "$(printf purge-dpkg | filter_name)" = '' ] && printf . || { echo filter_name 3 FAILED; exit 1; }
+
+    echo OK
+    exit 0
+fi
+
+if ! devel_name="$(basename "$0" | filter_name)" || [ -z "$devel_name" ]; then
+    echo "error: the script was called with a non-well-formatted name" >&2
+    exit 2
+fi
+
+case "${1:-}" in
+    -h|--help)
+	echo "usage: $(basename "$0") [-h|--help]"
+	echo "After confirmation, the devlopment environmnent will be purged and ready to be reinstalled"
+	exit 0
+    ;;
+esac
+
+if ! source="$(dpkg-query -W -f '${Source}' "$devel_name" 2>/dev/null)" || [ "$source" != 'edc-scibian' ]; then
+    echo "error : '$devel_name' is not installed or it's not an EDC" >&2
+    exit 1
+fi
+
+if ! EDC_TYPE=devel VERSION="${devel_name#devel-}" /usr/share/edc-base/uninstaller --check-only; then
+    echo "error : '$devel_name' seems to be in use, aborting" >&2
+    exit 2
+fi
+
+printf 'Please confirm the complete removal of "%s" (type "i confirm"): ' "$devel_name"
+read confirmation
+
+case "$confirmation" in
+    'i confirm')
+	:
+    ;;
+    *)
+	echo "The operation has not been confirmed, aborting"
+	exit 0
+    ;;
+esac
+
+if ! apt-get -o APT::Get::AutomaticRemove=false --assume-yes remove --purge "$devel_name"; then
+    echo "error : The operation failed" >&2
+    exit 1
+else
+    echo "'$devel_name' was properly purged"
+    echo "If your are allowed, you can reinstall it from the store"
+fi

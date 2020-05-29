@@ -1,0 +1,12 @@
+/usr/share/edc-base/purger-devel               /usr/sbin/purge-devel-scibian9
+/usr/share/edc-base/devel-pkgman               /usr/sbin/paquets-devel-scibian9
+/usr/share/edc-base/run-cron                   /etc/cron.daily/devel-scibian9_apt-compat
+/usr/share/edc-base/run-cron                   /etc/cron.daily/devel-scibian9_logrotate
+/usr/share/edc-base/run-in-edc                 /usr/bin/devel-scibian9
+/usr/share/edc-scibian/config/99nvidia         /usr/share/edc-scibian/config/devel-scibian9.d/99nvidia
+/usr/share/edc-scibian/config/10lazy-unmount   /usr/share/edc-scibian/config/devel-scibian9.d/10lazy-unmount
+/usr/share/edc-scibian/config/20sync-edc-files /usr/share/edc-scibian/config/devel-scibian9.d/20sync-edc-files
+/usr/share/edc-scibian/config/20install-pkgs   /usr/share/edc-scibian/config/devel-scibian9.d/20install-pkgs
+/usr/share/edc-scibian/config/14waitforprocs   /usr/share/edc-scibian/config/devel-scibian9.d/14waitforprocs
+/usr/share/edc-scibian/config/99loguser        /usr/share/edc-scibian/config/devel-scibian9.d/99loguser
+/usr/share/edc-scibian/config/40localtime      /usr/share/edc-scibian/config/devel-scibian9.d/40localtime

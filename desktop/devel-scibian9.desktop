@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Scibian 9 Development Environment terminal
+Name[fr]=Terminal de l'Env. de développement Scibian 9
+Comment=Open a terminal within the dev. environment
+Comment[fr]=Ouverture d'un terminal dans l'environnement de développement
+TryExec=x-terminal-emulator
+Exec=x-terminal-emulator -e devel-scibian9
+Icon=utilities-terminal
+Icon=/usr/share/icons/scibian/png/terminal-devel-scibian9.png
+Type=Application
+Categories=Scibian;
+StartupNotify=true
+X-KDE-StartupNotify=true

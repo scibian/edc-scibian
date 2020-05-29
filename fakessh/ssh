@@ -1,0 +1,73 @@
+#!/bin/sh
+
+set -e
+
+fork=false
+stdin_redir=false
+seen_host=false
+
+usage() {
+    echo 'usage: fakessh [options]' >&2
+}
+
+version() {
+    ssh_version="$(dpkg-query -W -f '${Version}\n' openssh-client)"
+    ssh_version="${ssh_version#*:}"
+    ossl_version="$(dpkg-query -W -f '${Version}\n' openssl)"
+
+    printf 'OpenSSH_%s Debian-%s, OpenSSL %s  3 May 2016\n' \
+	"${ssh_version%-*}" "${ssh_version#*-}" "${ossl_version%-*}" >&2
+}
+
+while true; do
+    while getopts 1246AaCfgKkMNnqsTtVvXxYyb:c:D:e:F:I:i:L:l:m:O:o:p:R:S:W:w: OPT; do
+	case "$OPT" in
+	    '?')
+		usage
+		exit 255
+	    ;;
+	    n)
+		stdin_redir=true
+	    ;;
+	    f)
+		fork=true
+	    ;;
+	    V)
+		version
+		exit
+	    ;;
+	    *)
+		:
+	    ;;
+	esac
+    done
+    
+    shift $(($OPTIND-1))
+
+    if $seen_host; then
+	break
+    else
+	if [ $# -eq 0 ]; then
+	    usage
+	    exit 255
+	fi
+
+	shift # the 'host' parameter
+	seen_host=true
+    fi
+done
+
+if [ $# -eq 0 ]; then
+    exec /bin/bash -l
+else
+    cmd="$1"
+    shift
+
+    if $fork; then
+	"$cmd" "$@" < /dev/null &
+    elif $stdin_redir; then
+	exec "$cmd" "$@" < /dev/null
+    else
+	exec "$cmd" "$@"
+    fi
+fi

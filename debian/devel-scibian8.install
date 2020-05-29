@@ -1,0 +1,6 @@
+schroot/devel-scibian8              etc/schroot/
+chroot-setup/devel-scibian8         usr/share/edc-scibian/chroot-setup/
+packages/devel-scibian8             usr/share/edc-scibian/packages/
+script-scibian.d/devel-scibian8.d/  usr/share/edc-scibian/config/
+desktop/devel-scibian8.desktop      /usr/share/applications
+icons/terminal-devel-scibian8.png   /usr/share/icons/scibian/png

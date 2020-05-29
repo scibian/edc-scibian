@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Debian testing Development Environment terminal
+Name[fr]=Terminal de l'Env. de développement Debian testing
+Comment=Open a terminal within the dev. environment
+Comment[fr]=Ouverture d'un terminal dans l'environnement de développement
+TryExec=x-terminal-emulator
+Exec=x-terminal-emulator -e devel-testing
+Icon=/usr/share/icons/scibian/png/terminal-devel-scibian-testing.png
+Type=Application
+Categories=Scibian;
+StartupNotify=true
+X-KDE-StartupNotify=true

@@ -1,0 +1,4 @@
+var/lib/edc-scibian
+var/lib/edc-scibian/fstab
+var/lib/edc-scibian/nvidia
+var/lib/edc-scibian/pkg-journal

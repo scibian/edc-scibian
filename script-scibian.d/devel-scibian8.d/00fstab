@@ -1,0 +1,35 @@
+# -*- sh -*-
+
+. /usr/share/edc-scibian/config/libs-functions
+
+edc_libdir=/var/lib/edc-scibian
+edc_fstab="$edc_libdir/$SESSION_ID"
+
+# use fstab/ if no previous session exists
+if ! [ -f "$edc_fstab" ]; then
+    edc_fstab="$edc_libdir/fstab/$SESSION_ID"
+fi
+
+if ! [ -f "$edc_fstab" ]; then
+    new_fstab="$edc_fstab".new
+    cp /etc/schroot/devel-scibian8/mount "$new_fstab"
+
+    {
+	bind_ifexists /run/gdm3
+	bind_ifexists /run/cups
+	bind_ifexists /var/run/utmp
+	bind_ifexists /projets
+	bind_ifexists /logiciels
+	bind_ifexists /netdata
+	bind_ifexists /data
+
+	if [ "${EDC_FAKESSH:-}" = yes ]; then
+	    bind_ifexists /usr/share/edc-base/fakessh/ssh to /usr/bin/ssh
+	fi
+    } >> "$new_fstab"
+
+    mv "$new_fstab" "$edc_fstab"
+fi
+
+FSTAB="$edc_fstab"
+unset edc_libdir edc_fstab

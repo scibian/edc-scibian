@@ -1,0 +1,118 @@
+# -*- sh -*-
+
+# Most code comes from schroot's 15killprocs script:
+#####################################################################
+# Copyright © 2007       Kees Cook <kees@outflux.net>
+# Copyright © 2007-2009  Roger Leigh <rleigh@debian.org>
+#
+# schroot is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# schroot is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see
+# <http://www.gnu.org/licenses/>.
+#
+#####################################################################
+
+set -e
+
+. "$SETUP_DATA_DIR/common-data"
+. "$SETUP_DATA_DIR/common-functions"
+
+do_redirect_output()
+{
+    local tty="$(tty)"
+    exec >"$tty"
+    exec 2>"$tty"
+}
+
+# Kill all processes that were run from within the chroot environment
+# $1: mount base location
+do_waitfor_all()
+{
+    if [ -z "$1" ]; then
+	fatal "No path for finding stray processes: not reaping processes in chroot"
+    fi
+
+    info "Waiting for processes run inside $1"
+    while :; do
+	local es=0
+
+	ls /proc | egrep '^[[:digit:]]+$' | {
+	seen_chroot_proc=false
+	abort_loop=false
+
+	trap 'abort_loop=true ; do_redirect_output' INT TERM
+
+	while read pid; do
+	    if $abort_loop; then
+		break
+	    fi
+	    # Check if process root are the same device/inode as chroot
+	    # root (for efficiency)
+	    if [ /proc/"$pid"/root -ef "$1" ]; then
+		# Check if process and chroot root are the same (may be
+		# different even if device/inode match).
+		root=$(readlink /proc/"$pid"/root || true)
+		if [ "$root" = "$1" ]; then
+		    seen_chroot_proc=true
+		    exe=$(readlink /proc/"$pid"/exe || true)
+		    info "Waiting for left-over pid $pid (${exe##$1})"
+
+		    count=0
+		    while [ -d /proc/"$pid" ]; do
+			count=$(( $count + 1 ))
+			info "  Waiting for pid $pid to shut down... ($count/infinite)"
+			sleep 1
+
+			if $abort_loop; then
+			    info "  Signal received, we won't wait for pid $pid"
+			    break
+			fi
+		    done
+		fi
+	    fi
+	done
+	# we are in a subshell, so use exit to transmit the status
+	if $abort_loop; then
+	    exit 101
+	fi
+	if ! $seen_chroot_proc; then
+	    exit 100
+	fi
+	# at this point there should be no processes left, but the loop
+	# is going to be executed one more time
+	exit 102
+	} || es=$?
+
+	# if there are no processes still running:
+	if [ $es -eq 100 ]; then
+	    break
+	fi
+	if [ $es -eq 101 ]; then
+	    do_redirect_output
+	    info "  Signal received and there are left-over processes still running"
+	    trap 'info "Re-running schroot to end session" ; schroot -e -c "$SESSION_ID" & disown' EXIT
+	    break
+	fi
+	if [ $es -ne 102 ]; then
+	    warn "  Subshell exited with code '$es', which is unexpected"
+	    break
+	fi
+    done
+}
+
+if { [ $STAGE = "setup-recover" ] || [ $STAGE = "setup-stop" ]; } && [ "$(basename "$0")" = "15killprocs" ]; then
+    trap ': ignore SIGPIPE' PIPE
+
+    do_waitfor_all "$CHROOT_PATH"
+fi
+
+set +e

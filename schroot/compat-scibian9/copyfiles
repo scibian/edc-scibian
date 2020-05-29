@@ -1,0 +1,5 @@
+/etc/hosts
+/etc/resolv.conf
+/etc/timezone
+/etc/localtime
+/etc/locale.gen

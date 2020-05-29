@@ -1,0 +1,237 @@
+#!/bin/sh
+
+set -eu
+
+if ischroot --default-true || [ $? -ne 1 ]; then
+    if ! [ -f '/var/lib/puppet/ssl/certs/ca.pem' ] && ! [ -f '/etc/imnotanedc' ]; then
+	echo "error : impossible to stack EDC" >&2
+	exit 1
+    else
+	# it looks like a would-be real system, so
+	: go ahead
+    fi
+fi
+
+SCHROOT_NAME="${EDC_TYPE}-${VERSION}"
+MAINTSCRIPT_ACTION="${1:-unknown}"
+ACCESS_GROUPS="${ACCESS_GROUPS:-chroot,generic}"
+
+upgrade_config() {
+    sed -r 's/^groups=.+$/groups='"${ACCESS_GROUPS}"'/' \
+        < /etc/schroot/chroot.d/${SCHROOT_NAME} \
+        > /etc/schroot/chroot.d/${SCHROOT_NAME}.new
+    mv /etc/schroot/chroot.d/${SCHROOT_NAME}.new /etc/schroot/chroot.d/${SCHROOT_NAME}
+}
+
+override="/var/lib/edc-scibian/setup-override/${SCHROOT_NAME}"
+if [ -f "$override" ]; then
+    # it only makes sense to override the MIRROR, SCIBIAN_MIRROR and DEBIAN_MIRROR variables
+    . "$override"
+fi
+
+
+ARCHITECTURE="${ARCHITECTURE:-amd64}"
+#INSTALLDIR_CANDIDATES="${INSTALLDIR_CANDIDATES:-/local01 /local00}"
+INSTALLDIR_CANDIDATES="${INSTALLDIR_CANDIDATES:-/local00}"
+MIRROR="${MIRROR:-http://scibian.org/repo/}"
+
+# DEPRECATED: DEBIAN_MIRROR; use *_MIRROR_URL instead
+DEBIAN_MIRROR="${DEBIAN_MIRROR:-http://ftp.fr.debian.org}"
+SCIBIAN_MIRROR="${SCIBIAN_MIRROR:-$MIRROR}"
+
+DEBIAN_MIRROR_URL="${DEBIAN_MIRROR_URL:-$DEBIAN_MIRROR/debian}"
+DEBIAN_SEC_MIRROR_URL="${DEBIAN_SEC_MIRROR_URL:-$DEBIAN_MIRROR/debian-security}"
+SCIBIAN_MIRROR_URL="${SCIBIAN_MIRROR_URL:-$SCIBIAN_MIRROR}"
+
+case $(lsb_release -c) in
+    *:*jessie)
+	HOST_DISTRIBUTION=jessie
+    ;;
+    *:*stretch)
+	HOST_DISTRIBUTION=stretch
+    ;;
+    *:*buster)
+	HOST_DISTRIBUTION=buster
+    ;;
+    *)
+	echo "error: host distribution is not known, aborting" >&2
+	exit 1
+    ;;
+esac
+
+
+for location in ${INSTALLDIR_CANDIDATES}; do
+    # Check if an EDC already exists
+    if [ -d "$location"/edc/${SCHROOT_NAME} ]; then
+	if [ "$MAINTSCRIPT_ACTION" = configure ]; then
+	    upgrade_config "$@"
+	fi
+
+	edc_dir="$location"/edc/${SCHROOT_NAME}
+	if [ -d "$edc_dir/debootstrap" ] || [ -f "$edc_dir/edc-bootrap-in-progress" ]; then
+	    exit 1
+	fi
+
+	echo "EDC already installed: nothing to do"
+	exit 0
+    fi
+    unset location
+done
+
+LOCAL=
+# Pas encore d'EDC d'installé
+for location in ${INSTALLDIR_CANDIDATES}; do
+    if [ -d "$location" ] && mountpoint -q "$location"; then
+	location_size="$(LC_ALL=C /bin/df -k -P "$location" | awk '!/Avail/ {print $4}')"
+	if [ "$location_size" -gt ${SPACE_NEEDED} ]; then
+	    LOCAL="$location"
+	    break
+	else
+	    echo "warning : not enought free space on $location"
+	fi
+    fi
+done
+unset location
+
+if [ -z "$LOCAL" ]; then
+    echo "error : not enought disk space" >&2
+    exit 2
+fi
+
+# Now that we have a location, define the target
+TARGET=${LOCAL}/edc/${SCHROOT_NAME}
+
+
+cd ${LOCAL}
+
+# Generate the schroot config
+mkdir -p /etc/schroot/chroot.d
+cat > /etc/schroot/chroot.d/${SCHROOT_NAME} << EOF
+[${SCHROOT_NAME}]
+type=directory
+description=${DESCRIPTION}
+groups=${ACCESS_GROUPS}
+directory=${TARGET}
+user-modifiable-keys=edc.fakessh
+EOF
+
+
+# Create the chroot
+LOGFILE=/var/log/edc-"${SCHROOT_NAME}".log
+echo "Creation of the EDC ${SCHROOT_NAME}, please be patient (about $INSTALL_MINUTES minutes)..."
+mkdir -p ${LOCAL}/edc
+
+onerror() {
+    echo "Creation of the EDC failed , please correct the issue, then purge and reinstall the package" >&2
+}
+trap onerror EXIT
+
+# To be defined only after eatmydata is installed in the EDC
+eatmydata_cmd=
+
+log_stamp() {
+    echo "At installation step '${1:-next}' at $(date +'%T %Z')" >> ${LOGFILE} 2>&1
+}
+in_edc() {
+    schroot -c ${SCHROOT_NAME} -- "$@"
+}
+
+in_edc_pkg_op() {
+    in_edc env DEBIAN_FRONTEND=noninteractive $eatmydata_cmd "$@"
+}
+
+savelog -nq "${LOGFILE}"
+echo " Base system installation..."
+log_stamp debootstrap
+
+dbs_opts=
+
+eatmydata \
+debootstrap $dbs_opts --arch ${ARCHITECTURE} \
+     ${DEBIAN_DISTRIBUTION} ${TARGET} ${DEBIAN_MIRROR_URL}/ \
+     >> ${LOGFILE} 2>&1
+mkdir -p ${TARGET}/local00
+
+log_stamp 'basic config'
+cp -a /usr/share/edc-base/policy-rc.d ${TARGET}/usr/sbin/policy-rc.d
+cp -a /usr/share/edc-base/apt.conf ${TARGET}/etc/apt/apt.conf.d/99edc
+cp -a /usr/share/edc-base/apt.preferences ${TARGET}/etc/apt/preferences.d/00scibian
+
+# BEWARE of the typo:
+touch ${TARGET}/edc-bootrap-in-progress
+
+cat > ${TARGET}/etc/apt/sources.list << EOF
+deb ${DEBIAN_MIRROR_URL} ${DEBIAN_DISTRIBUTION} main contrib non-free
+deb ${DEBIAN_SEC_MIRROR_URL} ${DEBIAN_DISTRIBUTION}/updates main contrib non-free
+EOF
+
+cat >> ${TARGET}/etc/apt/sources.list << EOF
+deb ${SCIBIAN_MIRROR_URL} ${VERSION} main contrib non-free
+EOF
+
+
+echo " Mise à jour de l'edc..."
+
+log_stamp 'apt update'
+in_edc apt-get update >> ${LOGFILE} 2>&1
+
+edc_distupgrade() {
+    # Take advantage of the fact that the exit code we see is the one of
+    # the last command. If apt-get aborts due to a downgrade we will
+    # happily retry the operation anyway
+    if in_edc_pkg_op env LC_ALL=C apt-get --yes dist-upgrade 2>&1 | tee -a ${LOGFILE} | grep -iq authenticated; then
+	echo " error : some packages cannot be authenticated " | tee -a ${LOGFILE} >&2
+	exit 1
+    fi
+    echo "Retrying dist-upgrade with --force-yes" >> ${LOGFILE}
+    # --force-yes to allow packages to be downgraded
+    if in_edc_pkg_op env LC_ALL=C apt-get --force-yes --yes dist-upgrade 2>&1 | tee -a ${LOGFILE} | grep -iq authenticated; then
+	echo " error : some packages cannot be authenticated " | tee -a ${LOGFILE} >&2
+	exit 1
+    fi
+}
+log_stamp 'dist-upgrade'
+edc_distupgrade
+
+echo " Packages configuration..."
+
+# Diverses configurations
+# TODO: perhaps move some of the code below directly into "setup"
+# TODO: scripts? 
+log_stamp 'chroot-setup scripts'
+mkdir -p ${TARGET}/usr/share/edc-scibian/
+cp -af /usr/share/edc-scibian/chroot-setup ${TARGET}/usr/share/edc-scibian/
+in_edc /usr/share/edc-scibian/chroot-setup/${SCHROOT_NAME}
+
+echo " Packages installation ${SCHROOT_NAME}..."
+log_stamp 'base packages'
+in_edc_pkg_op apt-get --yes install eatmydata >> ${LOGFILE} 2>&1
+# This will make all the following in_edc_pkg_op calls to use eatmydata
+eatmydata_cmd=eatmydata
+
+in_edc_pkg_op apt-get --yes install locales netbase libnss-extrausers $(cat /usr/share/edc-scibian/packages/${SCHROOT_NAME}) >> ${LOGFILE} 2>&1
+sed -ri '/^(passwd|group):/{s/$/ extrausers/}' ${TARGET}/etc/nsswitch.conf
+echo " Reconfigure broken packages"
+log_stamp 'dpkg configure'
+in_edc_pkg_op dpkg --configure -a >> ${LOGFILE} 2>&1
+
+echo " Cleaning..."
+log_stamp 'apt clean'
+in_edc_pkg_op apt-get clean >> ${LOGFILE} 2>&1
+
+log_stamp 'end of bootstrap'
+unlink ${TARGET}/etc/apt/apt.conf.d/99edc
+unlink ${TARGET}/edc-bootrap-in-progress
+
+echo " Update EDC..."
+log_stamp 'last apt update'
+in_edc apt-get update >> ${LOGFILE} 2>&1
+
+log_stamp 'last dist-upgrade'
+edc_distupgrade
+
+log_stamp 'exit'
+
+echo "The EDC is ready."
+
+trap : EXIT

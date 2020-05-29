@@ -1,0 +1,13 @@
+scibian-standard
+scibian-devel
+cups-client
+fonts-dustin
+fonts-freefont-ttf
+fonts-ipafont
+ttf-sjfonts
+xdg-utils
+libxm4
+xterm
+unattended-upgrades
+lynx
+scibian-modules

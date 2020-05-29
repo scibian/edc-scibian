@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# No -e due to readlink(1) below
+set -u
+
+edc="$(basename "$0")"
+link="$(readlink "$0")"
+
+extra_opts=
+
+# Is $0 a symlink to compat-scibianX? if so, read the link and
+# from there get the name of the EDC the command should be run in
+case "$link" in
+    compat-*)
+	edc="$link"
+	# Now add arg0 as a parameter for it to appear in $@
+	# this should allow the magic expansion of $@ to
+	# do The Right Thing
+	set -- "$0" "$@"
+    ;;
+    *)
+	# check if fakessh was requested
+	if [ "${1:-}" = '--fake-ssh' ]; then
+	    shift
+	    extra_opts="$extra_opts -o edc.fakessh=yes"
+	fi
+    ;;
+esac
+
+exec schroot -p $extra_opts -c "$edc" -- "$@"

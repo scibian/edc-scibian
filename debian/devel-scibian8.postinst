@@ -1,0 +1,16 @@
+#! /bin/sh
+set -e
+
+#DEBHELPER#
+
+EDC_TYPE=devel
+VERSION=scibian8
+DESCRIPTION="$EDC_TYPE Scibian 8"
+DEBIAN_DISTRIBUTION=jessie
+# Installed size + size of downloads
+SPACE_NEEDED=$((5500000+(2*1000*1000)))
+INSTALL_MINUTES=20
+
+export EDC_TYPE VERSION DESCRIPTION DEBIAN_DISTRIBUTION SPACE_NEEDED INSTALL_MINUTES
+
+/usr/share/edc-base/installer "$@"

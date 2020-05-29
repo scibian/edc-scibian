@@ -1,0 +1,14 @@
+/usr/share/edc-base/purger-devel                        /usr/sbin/purge-devel-testing
+/usr/share/edc-base/devel-pkgman                        /usr/sbin/paquets-devel-testing
+/usr/share/edc-base/block-upgrades                      /usr/sbin/bloquer-maj-devel-testing
+/usr/share/edc-base/unblock-upgrades                    /usr/sbin/debloquer-maj-devel-testing
+/usr/share/edc-base/run-cron                            /etc/cron.daily/devel-testing_apt-compat
+/usr/share/edc-base/run-cron                            /etc/cron.daily/devel-testing_logrotate
+/usr/share/edc-base/run-in-edc                          /usr/bin/devel-testing
+/usr/share/edc-scibian/config/10lazy-unmount            /usr/share/edc-scibian/config/devel-testing.d/10lazy-unmount
+/usr/share/edc-scibian/config/20sync-edc-files          /usr/share/edc-scibian/config/devel-testing.d/20sync-edc-files
+/usr/share/edc-scibian/config/20install-pkgs            /usr/share/edc-scibian/config/devel-testing.d/20install-pkgs
+/usr/share/edc-scibian/config/40localtime               /usr/share/edc-scibian/config/devel-testing.d/40localtime
+/usr/share/edc-scibian/config/99check-blocked-upgrades  /usr/share/edc-scibian/config/devel-testing.d/99check-blocked-upgrades
+/usr/share/edc-scibian/config/99nvidia                  /usr/share/edc-scibian/config/devel-testing.d/99nvidia
+/usr/share/edc-scibian/config/99loguser                 /usr/share/edc-scibian/config/devel-testing.d/99loguser

@@ -1,0 +1,4 @@
+schroot/compat-scibian9              etc/schroot/
+chroot-setup/compat-scibian9         usr/share/edc-scibian/chroot-setup/
+packages/compat-scibian9             usr/share/edc-scibian/packages/
+script-scibian.d/compat-scibian9.d/  usr/share/edc-scibian/config/

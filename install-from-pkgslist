@@ -1,0 +1,132 @@
+#!/bin/sh
+
+. "$SETUP_DATA_DIR/common-functions"
+. /usr/share/edc-scibian/config/pkg-functions
+
+set -eu
+
+# Input : edc_name (derived from CHROOT_NAME), AUTH_{R,}UID, CHROOT_DIRECTORY
+
+edc_name=$(echo $CHROOT_NAME|cut -d '-' -f 1,2)
+
+# A simple chroot is cheap, so no need to use dpkg-query's
+# --admindir
+
+block=false
+if [ "${AUTH_RUID:-${AUTH_UID:-0}}" = 0 ]; then
+    # If we believe that root is openning the session then let him
+    # pay the price of a change in the packages list and wait until
+    # they have been installed or removed, as instructed
+    block=true
+fi
+
+already_installed() {
+    local package="$1" status=
+    if ! status="$(run_in_chroot dpkg-query -f '\${Status}' -W "$package" 2>/dev/null)"; then
+	return 1
+    else
+	if [ "$status" = 'install ok installed' ]; then
+	    return 0
+	else
+	    return 1
+	fi
+    fi
+}
+
+removed() {
+    local package="$1" status=
+    if ! status="$(run_in_chroot dpkg-query -f '\${Status}' -W "$package" 2>/dev/null)"; then
+	return 0
+    else
+	case "$status" in
+	    remove' '*|purge' '*|unknown' '*|deinstall' '*)
+		return 0
+	    ;;
+	    *)
+		return 1
+	    ;;
+	esac
+    fi
+}
+
+# Self-tests
+# PERF: almost 0.1s
+if ! already_installed dpkg; then
+    fatal "dpkg is not installed in the chroot? huh, don't think so"
+fi
+if ! removed nonexistingpackage; then
+    fatal "a package that doesn't exist does exist in the chroot? huh, don't think so"
+fi
+if removed dpkg; then
+    fatal "dpkg has been removed from the chroot? huh, don't think so"
+fi
+
+actionsd="$(mktemp -d)"
+touch "$actionsd/install" "$actionsd/remove"
+
+installpkg_cleanup() {
+    [ -d "$actionsd" ] && rm -rf "$actionsd"
+}; trap installpkg_cleanup EXIT
+
+# PERF: about 0.02s per package
+for listd in /usr/share/edc-scibian/packages /var/lib/edc-scibian/packages; do
+    list="$listd/$edc_name"
+
+    if ! [ -f "$list" ]; then
+	continue
+    fi
+
+    {
+    # explicit subshell to be able to remove the trap at the end of
+    # the "normal", non-error, end of the while loop
+    while read line; do
+	case "$line" in
+	    '#'*|'')
+		continue
+	    ;;
+	    '-'*)
+		pkg="${line#-}"
+
+		if ! removed "$pkg"; then
+		    echo "$pkg" >> "$actionsd/remove"
+		fi
+	    ;;
+	    '+'*|[a-z0-9]*)
+		pkg="${line#+}"
+
+		if ! already_installed "$pkg"; then
+		    echo "$pkg" >> "$actionsd/install"
+		fi
+	    ;;
+	    *)
+		warn "unknown line format '$line' in '$list'"
+	    ;;
+	esac
+    done
+
+    trap : EXIT
+    } < "$list"
+done
+
+# Subshell, and if we are in blocking mode then just wait for it
+{
+    for pkg in $(cat "$actionsd/remove"); do
+	if ! remove_pkg "$pkg"; then
+	    fatal "failed to remove '$pkg'"
+	fi
+    done
+    for pkg in $(cat "$actionsd/install"); do
+	if ! install_pkg "$pkg"; then
+	    fatal "failed to install '$pkg'"
+	fi
+    done
+} > /dev/null &
+pid=$!
+
+# Remove the trap from the main shell. We don't want to nuke the lists in
+# case we are not in blocking mode
+trap : EXIT
+
+if $block; then
+    wait $pid
+fi

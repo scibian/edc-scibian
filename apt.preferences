@@ -1,0 +1,6 @@
+# This file might be overwritten,
+# only configure the equivalent of 00scibian
+
+Package: *
+Pin: release o=Scibian
+Pin-Priority: 1001

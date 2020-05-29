@@ -1,0 +1,48 @@
+# -*- sh -*-
+
+set -e
+
+. "$SETUP_DATA_DIR/common-data"
+. "$SETUP_DATA_DIR/common-functions"
+
+if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ]; then
+    info "Configuring gtk theme"
+
+    if [ -z "$CHROOT_PATH" ]; then
+	fatal "CHROOT_PATH is empty, not good"
+    fi
+
+    chroot "$CHROOT_PATH" /bin/sh -c '
+	set -eu
+	adwaita="/usr/share/themes/Adwaita"
+	clearlooks="/usr/share/themes/Clearlooks"
+	builtin_adwaita=false
+
+	if [ -f "$adwaita/gtk-3.0/gtk.css" ] && ! grep -q "@import" "$adwaita/gtk-3.0/gtk.css"; then
+	    builtin_adwaita=true
+	fi
+	# remove the symlink that we used to add
+	if $builtin_adwaita && [ -L "$clearlooks/gtk-3.0" ]; then
+	    unlink "$clearlooks/gtk-3.0"
+	fi
+
+	if [ -d "$clearlooks" ] && ! [ -d "$adwaita" ] &&
+	    ! [ -L "$adwaita" ]; then
+	    # env C7
+	    ln -s Clearlooks "$adwaita"
+	elif [ -d "$adwaita/gtk-3."0 ] &&
+	     ! [ -d "$clearlooks/gtk-3.0" ]; then
+	    if $builtin_adwaita; then
+		# env S8, we need to import the built-in CSS
+		mkdir -p "$clearlooks/gtk-3.0"
+		echo "@import url(\"resource:///org/gtk/libgtk/theme/Adwaita/gtk-contained.css\");" \
+		    > "$clearlooks/gtk-3.0/gtk.css.new"
+		mv "$clearlooks/gtk-3.0/gtk.css.new" "$clearlooks/gtk-3.0/gtk.css"
+	    else
+		# env C8 : a symlink is enough
+		ln -s ../Adwaita/gtk-3.0 "$clearlooks"
+	    fi
+	fi'
+fi
+
+set +e

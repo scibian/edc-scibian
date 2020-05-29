@@ -1,0 +1,14 @@
+scibian-standard
+scibian-devel
+scibian-non-free
+cups-client
+ttf-mscorefonts-installer
+fonts-dustin
+fonts-freefont-ttf
+ttf-kochi-gothic
+ttf-sjfonts
+xdg-utils
+libmotif4
+xterm
+unattended-upgrades
+lynx

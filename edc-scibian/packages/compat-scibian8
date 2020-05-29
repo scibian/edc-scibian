@@ -1,0 +1,7 @@
+#
+# Liste des packages qui seront installés ou supprimés dans les chroots
+# Pour l'EDC : compat-scibian8
+#
+# (+)nom_paquet -> paquet a installer
+#   -nom_paquet -> paquet a supprimer
+#

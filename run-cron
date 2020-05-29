@@ -1,0 +1,30 @@
+#!/bin/sh
+
+set -eu
+
+get_cronpath() {
+    local path cron arg="$1"
+    path="$(dirname "$arg")"
+    cron="$(basename "$arg")"
+    cron="${cron#*_}"
+    echo "$path/$cron"
+}
+get_schroot_name() {
+    local schroot arg="$1"
+    schroot="$(basename "$1")"
+    schroot="${schroot%%_*}"
+    echo "$schroot"
+}
+
+schroot_name="$(get_schroot_name "$0")"
+cron="$(get_cronpath "$0")"
+
+# there must be a command for the given schroot
+# fail silently otherwise
+if ! which "$schroot_name" >/dev/null; then
+    exit 0
+fi
+
+# We probably don't want all of the host's environment to be passed, so
+# let schroot clean it by not passing -p
+exec schroot -c "$schroot_name" "$cron"

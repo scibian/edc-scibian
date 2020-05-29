@@ -1,0 +1,23 @@
+# -*- sh -*-
+
+# schroot setup script :
+
+. "$SETUP_DATA_DIR/common-data"
+. "$SETUP_DATA_DIR/common-functions"
+
+set -e
+
+if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ] && \
+   ! [ -f "$CHROOT_PATH/edc-bootrap-in-progress" ]; then
+
+    linkto="/usr/share/zoneinfo/Europe/Paris"
+
+    # If chroot's localtime file not link to Europe/Paris, set it :
+    if [ "$(readlink $CHROOT_PATH/etc/localtime)" != "$linkto" ]; then
+        echo "Setting $CHROOT_NAME's localtime.."
+        ln -fs $linkto $CHROOT_PATH/etc/localtime
+        chroot $CHROOT_PATH dpkg-reconfigure -f noninteractive tzdata 2>/dev/null
+    fi
+fi
+
+set +e

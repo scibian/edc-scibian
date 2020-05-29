@@ -1,0 +1,27 @@
+#! /bin/sh
+
+set -eu
+
+STAMP_FILE='/etc/apt/apt.conf.d/99block-upgrades'
+
+if [ "$#" -ne 0 ]
+then
+	cat <<- EOF
+		Usage: $0
+
+		Unblock upgrades.
+	EOF
+
+	exit 1
+fi
+
+chroot_name="$(basename "$0" | sed -rn 's/^debloquer-maj-(.*)$/\1/p')"
+
+if ! schroot -c "$chroot_name" -- rm "$STAMP_FILE" 2> '/dev/null'
+then
+	cat <<- EOF
+		Upgrades were not blocked.
+	EOF
+
+	exit 1
+fi

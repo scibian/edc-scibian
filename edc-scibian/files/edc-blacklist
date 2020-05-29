@@ -1,0 +1,5 @@
+# Package's blacklist 
+#
+Package: schroot sudo grub-common grub2-common lilo mbr epiphany-browser chromium chromium-browser iceweasel firefox firefox-esr
+Pin: release o=*
+Pin-Priority: -101

@@ -1,0 +1,25 @@
+# -*- sh -*-
+
+if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ]
+then
+	STAMP_FILE="$CHROOT_PATH/etc/apt/apt.conf.d/99block-upgrades"
+
+	if [ -f "$STAMP_FILE" ]
+	then
+		now="$(date '+%s')"
+		until="$(date -d "$(sed -rn 's/^# - until (.*)$/\1/p' "$STAMP_FILE")" '+%s')"
+
+		if [ "$until" -gt "$now" ]
+		then
+			cat <<- EOF
+				Upgrades are blocked until $(date -d "@$until" --rfc-3339 'seconds')
+			EOF
+		else
+			cat <<- EOF
+				Upgrades were blocked until $(date -d "@$until" --rfc-3339 'seconds')
+			EOF
+
+			rm "$STAMP_FILE"
+		fi
+	fi
+fi

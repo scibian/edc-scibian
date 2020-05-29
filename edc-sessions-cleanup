@@ -1,0 +1,25 @@
+#!/bin/sh
+
+set -eu
+
+# The directory might not exist if the package has been removed and
+# that all remaining sessions had already been cleaned up
+cd /var/lib/edc-scibian 2>/dev/null || exit 0
+
+# fstabs used to be stored in '.'
+for dir in . fstab; do
+    cd "$dir" 2>/dev/null || continue
+
+    for session in *; do
+	if ! [ -f "$session" ]; then
+	    continue
+	fi
+
+	if ! [ -f /var/lib/schroot/session/"$session" ]; then
+	    # session does no longer appear to be in use
+	    unlink "$session"
+	fi
+    done
+
+    cd "$OLDPWD"
+done

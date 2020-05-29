@@ -1,0 +1,144 @@
+# -*- sh -*-
+
+set -e
+
+. "$SETUP_DATA_DIR/common-data"
+. "$SETUP_DATA_DIR/common-functions"
+. /usr/share/edc-scibian/config/libs-functions
+. /usr/share/edc-scibian/config/pkg-functions
+
+if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ]; then
+    info "Configuring OpenGL"
+
+    if [ -z "$CHROOT_PATH" ]; then
+	fatal "CHROOT_PATH is empty, not good"
+    fi
+
+    set -u
+    has_nvidia=false
+    if [ -c "/dev/nvidia0" ] && [ -c "/dev/nvidiactl" ] && [ -c "/dev/nvidia-modeset" ]; then
+	 has_nvidia=true
+         cp -a /dev/nvidia0 $CHROOT_PATH/dev/nvidia0
+         cp -a /dev/nvidiactl $CHROOT_PATH/dev/nvidiactl
+         cp -a /dev/nvidia-modeset $CHROOT_PATH/dev/nvidia-modeset
+    fi
+
+    if ! [ -f "$CHROOT_PATH/edc-bootrap-in-progress" ]; then
+
+	libGL_exists() {
+	    chroot "$CHROOT_PATH" /bin/sh -c '
+		libGLdev_found=false
+		for path in usr/lib usr/lib/x86_64-linux-gnu; do
+		    if [ -f "$path/libGL.so" ]; then
+			libGLdev_found=true
+		    fi
+		done
+		if ! $libGLdev_found; then
+		    exit 1
+		else
+		    exit 0
+		fi
+	    '
+	}
+
+	if ! libGL_exists; then
+	    info "could not find libGL.so, trying to restore it"
+	    reinstall_pkg libgl1-mesa-dev
+	    reinstall_pkg libgl1-mesa-glx
+	    install_pkg glx-alternative-mesa
+	fi
+    fi
+
+    edc_name="$(echo "$CHROOT_NAME" | cut -d '-' -f 1,2)"
+    edc_version="$(echo "$edc_name" | cut -d '-' -f 2)"
+
+    nvidia_lock=/var/lock/edc/
+    mkdir -p "$nvidia_lock"
+
+    nvidia_flagd=/var/lib/edc-scibian/nvidia/
+    if $has_nvidia && ! [ -f "$CHROOT_PATH/edc-bootrap-in-progress" ] && { \
+	! [ -f "$nvidia_flagd/update" ] || ! [ -f "$nvidia_flagd/$edc_name" ] || \
+	[ "$nvidia_flagd/update" -nt "$nvidia_flagd/$edc_name" ] ; } && flock --nb 1; then
+
+
+	if ! [ -f "$nvidia_flagd/update" ]; then
+	    touch "$nvidia_flagd/update"
+	fi
+
+	APT_TOLERANCE=tolerant_apt
+
+	rm -rf "$CHROOT_PATH/usr/lib/nvidia/edc"
+	rm -rf "$CHROOT_PATH/usr/lib/x86_64-linux-gnu/nvidia/edc"
+	rm -rf "$CHROOT_PATH/usr/lib/i386-linux-gnu/nvidia/edc"
+
+	cnl_options='--multiarch-target'
+
+	# Copy the libraries
+	if ! install_cmds="$(/usr/share/edc-base/copy-nvidia-libs $cnl_options)"; then
+	    fatal "failed to find the NVIDIA libraries to be copied"
+	fi
+
+	eval "$install_cmds"
+
+	# nvidia-alternatives handling
+	# paths relative to the EDC
+	edc_rel_alt_scriptd="/usr/share/edc-scibian"
+	edc_rel_alt_script="$edc_rel_alt_scriptd/nvidia-alternative"
+	# paths relative to our rootfs
+	edc_alt_scriptd="$CHROOT_PATH/$edc_rel_alt_scriptd"
+	edc_alt_script="$CHROOT_PATH/$edc_rel_alt_script"
+
+	# Remove the current alternatives
+	if [ -x "$edc_alt_script" ]; then
+	    chroot "$CHROOT_PATH" "$edc_rel_alt_script" remove
+	fi
+
+	found_candidate=false
+	info "looking for $edc_name $edc_version"
+	for candidate in $edc_name $edc_version; do
+	    alt_script="/usr/share/edc-scibian/config/nvidia/$candidate"
+
+	    if ! [ -f "$alt_script" ]; then
+		continue
+	    fi
+
+	    # cleanup the old libGL libs before setting up with update-alternative
+	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/lib/x86_64-linux-gnu/libGL.so*'
+	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/lib/i386-linux-gnu/libGL.so*'
+	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/lib/x86_64-linux-gnu/libGLdispatch.so*'
+
+	    mkdir -p "$edc_alt_scriptd"
+	    cp -a "$alt_script" "$edc_alt_script"
+	    chmod +x "$edc_alt_script"
+	    chroot "$CHROOT_PATH" "$edc_rel_alt_script"
+	    found_candidate=true
+	    break
+	done
+
+	    # convert libGLdispatch.so.0 to link
+	    [ -f $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0 ] && \
+		    [ -f $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0 ] && \
+		    ln -sf /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0 $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0 && \
+		    ln -sf /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0 $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so
+	
+	# Make sure the triggers are executed:
+	chroot "$CHROOT_PATH" /bin/sh -c 'dpkg --triggers-only --pending'
+
+	# Useless actually ? 
+	# chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/local/lib/x86_64-linux-gnu/libnvidia-*.so*'
+	# chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/local/lib/i386-linux-gnu/libnvidia-*.so*'
+
+	ln -sf /usr/lib/x86_64-linux-gnu/libGL.so.1 $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGL.so
+
+	chroot "$CHROOT_PATH" /sbin/ldconfig || :
+
+	if $found_candidate; then
+	    touch "$nvidia_flagd/$edc_name"
+	else
+	    fatal "could not find NVIDIA alternatives script"
+	fi
+    fi > "$nvidia_lock/nvidia.$edc_name"
+    set +u
+fi
+
+set +e

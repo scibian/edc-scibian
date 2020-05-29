@@ -1,0 +1,4 @@
+schroot/compat-scibian8              etc/schroot/
+chroot-setup/compat-scibian8         usr/share/edc-scibian/chroot-setup/
+packages/compat-scibian8             usr/share/edc-scibian/packages/
+script-scibian.d/compat-scibian8.d/  usr/share/edc-scibian/config/

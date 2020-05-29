@@ -1,0 +1,14 @@
+# mount.defaults: static file system information for chroots.
+# Note that the mount point will be prefixed by the chroot path
+# (CHROOT_PATH)
+#
+# <file system> <mount point>   <type>  <options>       <dump>  <pass>
+/proc           /proc           none    rw,bind         0       0
+/sys            /sys            none    rw,bind         0       0
+/dev/pts        /dev/pts        none    rw,bind         0       0
+/dev/dri        /dev/dri        none    rw,bind         0       0
+tmpfs           /run/shm        tmpfs   defaults        0       0
+/home           /home           none    rw,rbind         0       0
+/tmp            /tmp            none    rw,bind         0       0
+/local00        /local00        none    rw,bind         0       0
+/usr/share/edc-base/fakessh /usr/share/edc-base/fakessh none rw,bind 0 0

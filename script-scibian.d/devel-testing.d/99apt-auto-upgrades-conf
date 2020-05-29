@@ -1,0 +1,11 @@
+# -*- sh -*-
+
+. "$SETUP_DATA_DIR/common-data"
+. "$SETUP_DATA_DIR/common-functions"
+
+if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ]; then
+    info "Configuring APT auto upgrades"
+
+    cp /usr/share/edc-base/apt.auto-upgrades "$CHROOT_PATH/etc/apt/apt.conf.d/21auto-upgrades-scibian"
+    cp /usr/share/edc-base/apt.unattended-upgrades "$CHROOT_PATH/etc/apt/apt.conf.d/51unattended-upgrades-scibian"
+fi

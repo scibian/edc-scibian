@@ -1,0 +1,89 @@
+# -*- sh -*-
+
+# Input : CHROOT_DIRECTORY
+
+APT_TOLERANCE=tolerant_apt
+
+run_in_chroot() {
+    # /!\ we must not call schroot from within a hook /!\
+    # We must also use CHROOT_DIRECTORY and not CHROOT_PATH (the latter
+    # being the session-dependent path) to not to block the bind mounts
+    printf "%s\n" "$*" |
+    exec env -i PATH='/usr/sbin:/usr/bin:/sbin:/bin' chroot "$CHROOT_DIRECTORY" /bin/sh -s
+}
+
+mediating_apt() {
+    local output= retryc=4 retry_backoff=5
+    # Retry up to 5^4 = 625 seconds later (+ 5 + 5*5)
+
+    while [ $retryc -gt 0 ]; do
+	if output="$(run_in_chroot LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get --assume-yes "$@" 2>&1)"; then
+	    return 0
+	fi
+
+	# Is it an error condition for which we can just wait and see it get fixed?
+	case $output in
+	    *'Could not get lock'*'11: '*)
+		: ok for retrying
+	    ;;
+	    *'has no installation candidate'*|*'Unable to locate package'*)
+		: gah, new packages can be added, so ignore if they can not be found
+		return 2
+	    ;;
+	    *'cannot be authenticated'*)
+		: not much can be done, let it go
+		return 2
+	    ;;
+	    *"run 'dpkg --configure -a'"*)
+		# do as apt says and retry
+		run_in_chroot LC_ALL=C DEBIAN_FRONTEND=noninteractive dpkg --configure -a
+	    ;;
+	    *)
+		: some other error condition, bail out
+		break
+	    ;;
+	esac
+	retryc=$(($retryc - 1))
+	if [ $retryc -gt 0 ]; then
+	    sleep ${retry_backoff}
+	    retry_backoff=$(($retry_backoff * $retry_backoff))
+	fi
+    done
+
+    return 1
+}
+
+tolerant_apt() {
+    local es=0
+
+    mediating_apt "$@" || es=$?
+
+    if [ $es -eq 2 ]; then
+	return 0
+    fi
+    return $es
+}
+
+intolerant_apt() {
+    mediating_apt "$@"
+}
+
+fancy_apt() {
+    # apply tolerance policy
+    "$APT_TOLERANCE" "$@"
+}
+
+install_pkg() {
+    local pkg="$1"
+    fancy_apt -o APT::Get::AutomaticRemove=false --no-remove install "$pkg"
+}
+
+reinstall_pkg() {
+    local pkg="$1"
+    fancy_apt -o APT::Get::AutomaticRemove=false --no-remove --reinstall install "$pkg"
+}
+
+remove_pkg() {
+    local pkg="$1"
+    fancy_apt remove "$pkg"
+}

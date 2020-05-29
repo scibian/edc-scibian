@@ -1,0 +1,10 @@
+#!/bin/sh
+
+COPYFILES="/etc/schroot/devel-testing/copyfiles"
+SBUILD="false"
+NSSDATABASES="/etc/schroot/edc/nssdatabases"
+
+for i in /usr/share/edc-scibian/config/devel-testing.d/*
+do
+    . $i
+done

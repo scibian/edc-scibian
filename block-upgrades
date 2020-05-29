@@ -1,0 +1,75 @@
+#! /bin/sh
+
+set -eu
+
+STAMP_FILE='/etc/apt/apt.conf.d/99block-upgrades'
+
+# ! $([ "$1" -eq "$1" ] 2> '/dev/null') checks that $1 is an integer
+if [ "$#" -ne 1 ] || ! $([ "$1" -eq "$1" ] 2> '/dev/null') || [ "$1" -le 0 ]
+then
+	cat <<- EOF
+		Usage: $0 <number of days>
+
+		<number of days>: number of days which to block upgrades for.
+
+		Upgrades can be blocked for 30 days maximum at a time and for a total period of 90 days.
+	EOF
+
+	exit 1
+fi
+
+if [ "$1" -gt 30 ]
+then
+	cat <<- EOF
+		Upgrades can be blocked for 30 days maximum at a time.
+	EOF
+
+	exit 1
+fi
+
+chroot_name="$(basename "$0" | sed -rn 's/^bloquer-maj-(.*)$/\1/p')"
+chroot_session_name="$(schroot -b -c "$chroot_name" 2> '/dev/null')"
+
+stamp="$(schroot -r -c "$chroot_session_name" -- /bin/sh -c "if [ -f \"$STAMP_FILE\" ]; then cat \"$STAMP_FILE\"; fi")"
+
+delay="$(($1 * 24 * 60 * 60))"
+
+since="$(if [ -n "$stamp" ]; then date -d "$(echo "$stamp" | sed -rn 's/^# - since (.*)$/\1/p')" '+%s'; fi)"
+now="$(date '+%s')"
+until="$(($now + $delay))"
+
+if [ -z "$since" ]
+then
+	since="$now"
+fi
+
+if [ "$until" -gt "$(($since + 90 * 24 * 60 * 60))" ]
+then
+	cat <<- EOF
+		Upgrades cannot be blocked for more than 90 days (they are blocked since $(date -d "@$since" --rfc-3339 'seconds')).
+	EOF
+
+	schroot -e -c "$chroot_session_name"
+
+	exit 1
+fi
+
+schroot -r -c "$chroot_session_name" -- /bin/sh -s <<- EOF1
+	temp_file="\$(mktemp "$STAMP_FILE.XXX")"
+
+	chmod 644 "\$temp_file"
+
+	cat <<- EOF2 > "\$temp_file"
+		# This file is generated automatically. DO NOT EDIT!
+		#
+		# Block upgrades:
+		# - since $(date -d "@$since" --rfc-3339 'seconds')
+		# - until $(date -d "@$until" --rfc-3339 'seconds')
+
+		APT::Periodic::Unattended-Upgrade "0";
+	EOF2
+
+	mv "\$temp_file" "$STAMP_FILE"
+EOF1
+
+schroot -e -c "$chroot_session_name"

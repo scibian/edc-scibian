@@ -1,0 +1,39 @@
+#! /bin/sh
+
+set -eu
+
+if [ "x$1" != x--purge ] && [ "x$1" != x--check-only ]; then
+    echo "usage: $(basename "$0") --purge|--check-only" >&2
+    exit 1
+fi
+
+SCHROOT_NAME="${EDC_TYPE}-${VERSION}"
+
+if mount | grep -q "$SCHROOT_NAME" ||
+   { which schroot >/dev/null && schroot --all-sessions -l | grep -q "$SCHROOT_NAME"; } ; then
+    echo "error: $SCHROOT_NAME seems to be in use, aborting" >&2
+    exit 1
+fi
+
+# Intentional explicit check for --purge
+if [ "x$1" = x--purge ]; then
+
+    rm -rf /var/lib/edc-scibian/nvidia/"$SCHROOT_NAME"
+
+    LOCAL=/local00
+
+    TARGET=$LOCAL/edc/$SCHROOT_NAME
+    echo "Deleting $SCHROOT_NAME..."
+    # /!\ --one-file-system /!\
+    rm -rf --one-file-system $TARGET
+
+    if [ -d $LOCAL/edc ]; then
+	rmdir --ignore-fail-on-non-empty $LOCAL/edc
+    fi
+
+    if [ -f /etc/schroot/chroot.d/$SCHROOT_NAME ]; then
+	unlink /etc/schroot/chroot.d/$SCHROOT_NAME
+	rmdir -p --ignore-fail-on-non-empty /etc/schroot/chroot.d
+    fi
+
+fi

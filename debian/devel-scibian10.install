@@ -1,0 +1,6 @@
+schroot/devel-scibian10              etc/schroot/
+chroot-setup/devel-scibian10         usr/share/edc-scibian/chroot-setup/
+packages/devel-scibian10             usr/share/edc-scibian/packages/
+script-scibian.d/devel-scibian10.d/  usr/share/edc-scibian/config/
+desktop/devel-scibian10.desktop      /usr/share/applications
+icons/terminal-devel-scibian10.png   /usr/share/icons/scibian/png

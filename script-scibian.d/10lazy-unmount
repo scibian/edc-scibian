@@ -1,0 +1,12 @@
+# -*- sh -*-
+
+set -e
+
+if [ "$(basename "$0")" = "10mount" ]; then
+    # Force a lazy unmount
+    umount() {
+	$(which umount) -l "$@"
+    }
+fi
+
+set +e

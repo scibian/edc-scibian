@@ -1,0 +1,8 @@
+#
+# depots scibian 10 national, pour EDC devel10
+#
+deb http://scibian.org/repo/ scibian10 main
+
+deb http://ftp.fr.debian.org/debian/ testing main contrib non-free
+deb http://security.debian.org/debian-security testing/updates main contrib non-free
+deb http://ftp.fr.debian.org/debian/ testing-updates main contrib non-free

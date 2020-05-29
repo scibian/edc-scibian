@@ -1,0 +1,59 @@
+Source: edc-scibian
+Section: scibian
+Priority: extra
+Maintainer: Scibian Packaging Team <packaging@scibian.org>
+Build-Depends: debhelper (>= 12)
+Standards-Version: 4.3.0
+
+Package: edc-base
+Architecture: amd64
+Depends: schroot, debootstrap, eatmydata, 
+ ${misc:Depends}
+Description: Base support for EDC
+ This package contains support for compatibility and
+ development environment.
+
+Package: compat-scibian8
+Architecture: amd64
+Depends: edc-base (>= ${binary:Version}), ${misc:Depends}
+Description: Compatibility environment for Scibian 8
+ This compatibility environment allows to run an application
+ designed for Scibian 8 on another operating system.
+
+Package: devel-scibian8
+Architecture: amd64
+Depends: edc-base (>= ${binary:Version}), ${misc:Depends}
+Description: Development environment for Scibian 8
+ This compatibility environment allows to build an application
+ for Scibian 8 on another operating system.
+
+Package: compat-scibian9
+Architecture: amd64
+Depends: edc-base (>= ${binary:Version}), ${misc:Depends}
+Description: Compatibility environment for Scibian 9
+ This compatibility environment allows to run an application
+ designed for Scibian 9 on another operating system.
+
+Package: devel-scibian9
+Architecture: amd64
+Depends: edc-base (>= ${binary:Version}), ${misc:Depends}
+Description: Development environment for Scibian 9
+ This compatibility environment allows to build an application
+ for Scibian 9 on another operating system.
+
+Package: devel-scibian10
+Architecture: amd64
+Depends: edc-base (>= ${binary:Version}), ${misc:Depends}
+Description: Development environment for Scibian 10
+ This compatibility environment allows to build an application
+ for Scibian 10 on another operating system.
+
+Package: devel-testing
+Architecture: amd64
+Depends: edc-base (>= ${binary:Version}), ${misc:Depends}
+Description: Environnement de développement Debian testing
+ L'environnement de développement (EDC) permet le développement
+ d'applications pour le future palier de la souche Scibian sur un
+ autre palier. Cet environnement ne contient pas des composants
+ d'intégration Scibian; il contient uniquement des logiciels Debian.
+

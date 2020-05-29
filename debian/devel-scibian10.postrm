@@ -1,0 +1,13 @@
+#! /bin/sh
+set -e
+
+#DEBHELPER#
+
+EDC_TYPE=devel
+VERSION=scibian10
+
+export EDC_TYPE VERSION
+
+if [ "$1" = purge ]; then
+    /usr/share/edc-base/uninstaller --purge
+fi

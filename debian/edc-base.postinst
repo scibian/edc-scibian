@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -e
+
+#DEBHELPER#
+
+# chroot group creation and adding to pam_group
+addgroup --system --quiet chroot
+
+for group in gdm-password slurm sshd; do
+    sed -i '/^'"$group"'.*chroot$/d' /etc/security/group.conf
+    echo "$group"'; *; *;Al0000-2400; chroot' >> /etc/security/group.conf
+done
+
+mkdir -p /etc/systemd/system/user@.service.d
+echo "[Service]\nSupplementaryGroups=chroot" > /etc/systemd/system/user@.service.d/compat-scibian8.conf
+
+if [ "$1" = triggered ]; then
+    touch /var/lib/edc-scibian/nvidia/update
+fi

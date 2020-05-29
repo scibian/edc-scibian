@@ -1,0 +1,4 @@
+
+Package: *
+Pin: release o=Scibian
+Pin-Priority: 1001

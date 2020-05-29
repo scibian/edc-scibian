@@ -1,0 +1,11 @@
+/usr/share/edc-base/purger-devel                /usr/sbin/purge-devel-scibian8
+/usr/share/edc-base/devel-pkgman                /usr/sbin/paquets-devel-scibian8
+/usr/share/edc-base/run-cron                    /etc/cron.daily/devel-scibian8_apt
+/usr/share/edc-base/run-cron                    /etc/cron.daily/devel-scibian8_logrotate
+/usr/share/edc-base/run-in-edc                  /usr/bin/devel-scibian8
+/usr/share/edc-scibian/config/99nvidia          /usr/share/edc-scibian/config/devel-scibian8.d/99nvidia
+/usr/share/edc-scibian/config/10lazy-unmount    /usr/share/edc-scibian/config/devel-scibian8.d/10lazy-unmount
+/usr/share/edc-scibian/config/20sync-edc-files  /usr/share/edc-scibian/config/devel-scibian8.d/20sync-edc-files
+/usr/share/edc-scibian/config/20install-pkgs    /usr/share/edc-scibian/config/devel-scibian8.d/20install-pkgs
+/usr/share/edc-scibian/config/14waitforprocs    /usr/share/edc-scibian/config/devel-scibian8.d/14waitforprocs
+/usr/share/edc-scibian/config/99loguser         /usr/share/edc-scibian/config/devel-scibian8.d/99loguser

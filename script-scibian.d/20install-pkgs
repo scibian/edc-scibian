@@ -1,0 +1,16 @@
+# -*- sh -*-
+
+. "$SETUP_DATA_DIR/common-data"
+. "$SETUP_DATA_DIR/common-functions"
+
+set -e
+
+if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ] &&
+    ! [ -f "$CHROOT_PATH/edc-bootrap-in-progress" ]; then
+
+    info "Adding and removing installed packages"
+
+    /usr/share/edc-base/install-from-pkgslist
+fi
+
+set +e

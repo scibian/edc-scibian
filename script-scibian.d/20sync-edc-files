@@ -1,0 +1,46 @@
+# -*- sh -*-
+
+# schroot setup script :
+# every time the EDC starts, we copy the necessary files from the host
+
+. "$SETUP_DATA_DIR/common-data"
+. "$SETUP_DATA_DIR/common-functions"
+
+set -e
+
+if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ] && \
+   ! [ -f "$CHROOT_PATH/edc-bootrap-in-progress" ]; then
+
+    edc=$(echo $CHROOT_NAME|cut -d '-' -f 1,2)
+    edc_files="/var/lib/edc-scibian/files/$edc"
+
+    ## Files sync ##
+
+    while read source dest ; do
+	case $source in
+	    \#*)
+		continue
+	    ;;
+            "")
+                continue
+            ;;
+	    *)
+		if ! [ -z "$dest" ] ; then
+            if ! [ -d $(dirname $CHROOT_PATH$dest) ]; then
+                 mkdir -p $(dirname $CHROOT_PATH$dest) # home creation creation, if needed
+            fi
+		    cp -a "$source" "$CHROOT_PATH$dest"
+		else
+            if ! [ -d $(dirname $CHROOT_PATH$source) ]; then 
+                 mkdir -p $(dirname $CHROOT_PATH$source)
+            fi
+		    cp -a "$source" "$CHROOT_PATH$source"
+		fi
+	    ;;
+	esac
+    done < $edc_files/list.files
+
+    unset edc edc_files
+fi
+
+set +e

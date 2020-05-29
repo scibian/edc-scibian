@@ -1,0 +1,226 @@
+#!/bin/sh
+
+set -eu
+
+# Functions #
+
+filter_name() {
+    sed -nr 's/^paquets-(devel-[a-z0-9]+)$/\1/;T;p;'
+}
+
+journal_record() {
+    local action="$1" package="$2"
+
+    if [ "$action" = add ]; then
+	cat "$journal_file"
+	printf '%s\n' "$package"
+    elif [ "$action" = remove ]; then
+	while read journal_package; do
+	    if [ "$package" != "$journal_package" ]; then
+		echo "$journal_package"
+	    fi
+	done < "$journal_file"
+    else
+	echo FIXME >&2
+	exit 103
+    fi | sort -u > "$journal_file.new"
+    mv "$journal_file.new" "$journal_file"
+}
+
+in_journal() {
+    local package="$1"
+
+    while read journal_package; do
+	if [ "$package" = "$journal_package" ]; then
+	    return 0
+	fi
+    done < "$journal_file"
+    return 1
+}
+
+journal() {
+    local action="$1" package="$2"
+    case "$action" in
+	install)
+	    # The user can flag any package as installed
+	    # otherwise...
+	    if already_installed "$package"; then
+		echo "error : '$package' already installed" >&2
+		exit 2
+	    fi
+	    journal_record add "$package"
+	;;
+	remove)
+	    if ! in_journal "$package"; then
+		echo "error : impossible to remove '$package' : Not installed by this method" >&2
+		exit 2
+	    fi
+	    journal_record remove "$package"
+	;;
+	*)
+	    echo FIXME >&2
+	    exit 102
+	;;
+    esac
+}
+
+show_journal() {
+    cat < "$journal_file"
+}
+
+run_in_chroot() {
+    printf "%s\n" "$*" |
+    exec env -i schroot -c "$devel_name" -- /bin/sh -s
+}
+
+already_installed() {
+    local package="$1" status=
+    if ! status="$(run_in_chroot dpkg-query -f '\${Status}' -W "$package" 2>/dev/null)"; then
+	return 1
+    else
+	if [ "$status" = 'install ok installed' ]; then
+	    return 0
+	else
+	    return 1
+	fi
+    fi
+}
+
+install_pkg() {
+    local pkg="$1"
+    journal install "$pkg"
+    run_in_chroot DEBIAN_FRONTEND=noninteractive apt-get -o APT::Get::AutomaticRemove=false --no-remove --assume-yes install "$pkg"
+}
+
+remove_pkg() {
+    local pkg="$1"
+    journal remove "$pkg"
+    run_in_chroot DEBIAN_FRONTEND=noninteractive apt-get --assume-yes remove "$pkg"
+}
+
+autoremove() {
+    run_in_chroot DEBIAN_FRONTEND=noninteractive apt-get --assume-yes autoremove
+}
+
+get_lock() {
+    ln -s $$ "$journal_file.lock" 2>/dev/null
+}
+
+release_lock() {
+    unlink "$journal_file.lock"
+}
+
+# End of Functions #
+
+
+if [ "x${1:-}" = "x--self-test" ]; then
+    [ "$(printf paquets-devel-testing | filter_name)" = devel-testing ] && printf . || { echo filter_name 1.1 FAILED; exit 1; }
+    [ "$(printf paquets-devel-foo.bar | filter_name)" = '' ] && printf . || { echo filter_name 2 FAILED; exit 1; }
+    [ "$(printf paquets-dpkg | filter_name)" = '' ] && printf . || { echo filter_name 3 FAILED; exit 1; }
+
+    echo OK
+    exit 0
+fi
+
+if ! devel_name="$(basename "$0" | filter_name)" || [ -z "$devel_name" ]; then
+    echo "error: the script was called with a non-well-formatted name" >&2
+    exit 2
+fi
+
+journal_file=/var/lib/edc-scibian/pkg-journal/"$devel_name"
+action=
+
+case "${1:-}" in
+    ''|-h|--help)
+	echo "usage: $(basename "$0") install|remove package"
+	echo "usage: $(basename "$0") list"
+	echo "usage: $(basename "$0") [-h|--help]"
+	exit 0
+    ;;
+    install|installer)
+	action=install
+	shift
+    ;;
+    remove|supprimer)
+	action=remove
+	shift
+    ;;
+    list|lister)
+	action=list
+	shift
+    ;;
+    *)
+	echo "error: unknown operation" >&2
+	exit 1
+    ;;
+esac
+
+if ! source="$(dpkg-query -W -f '${Source}' "$devel_name" 2>/dev/null)" || [ "$source" != 'edc-scibian' ]; then
+    echo "error : '$devel_name' is not installed or it's not an EDC" >&2
+    exit 1
+fi
+
+if [ "$action" != list ]; then
+    packages=
+
+    while [ $# -gt 0 ]; do
+	package="${1:-}"
+	printf %s "$package" |
+	if ! grep -Eq '^[a-zA-Z0-9][a-zA-Z0-9.+-]+$'; then
+	    echo "error : please specify a package" >&2
+	    exit 1
+	fi
+	packages="$packages $package"
+	shift
+    done
+    if [ -z "$packages" ]; then
+	echo "warning : please specify a package"
+	exit 0
+    fi
+fi
+
+get_lock
+trap : INT
+trap release_lock EXIT
+
+if ! [ -f "$journal_file" ]; then
+    touch "$journal_file"
+fi
+
+if [ -f "$journal_file.new" ]; then
+    echo "error : corrupted base, please contact your support or purge and reinstall the environment" >&2
+    exit 1
+fi
+
+case "$action" in
+    install)
+	for package in $packages; do
+	    if already_installed "$package"; then
+		echo "warning : '$package' is already installed" >&2
+		continue
+	    fi
+	    if ! install_pkg "$package"; then
+		echo "error : the operation failed" >&2
+		exit 1
+	    fi
+	done
+	echo "Done"
+    ;;
+    remove)
+	for package in $packages; do
+	    if ! remove_pkg "$package"; then
+		echo "error : the operation failed" >&2
+		exit 1
+	    fi
+	done
+	autoremove
+	echo "Done"
+    ;;
+    list)
+	show_journal
+    ;;
+    *)
+	echo FIXME >&2
+	exit 101
+    ;;
+esac
