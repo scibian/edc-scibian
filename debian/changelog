@@ -1,10 +1,10 @@
-edc-scibian (10.0.1) scibian/buster; urgency=medium
+edc-scibian (10.0.1) buster; urgency=medium
 
   * Add gpg key for Scibian repositorie
 
  -- Scibian Packaging Team <packaging@scibian.org>  Tue, 02 Jun 2020 16:18:16 +0200
 
-edc-scibian (10.0.0) scibian/buster; urgency=medium
+edc-scibian (10.0.0) buster; urgency=medium
 
   * Initial release for scibian.org
 
