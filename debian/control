@@ -1,7 +1,9 @@
 Source: edc-scibian
 Section: scibian
 Priority: extra
-Maintainer: Scibian Packaging Team <packaging@scibian.org>
+Maintainer: Scibian Project <packaging@scibian.org>
+Vcs-Browser: https://github.com/scibian/edc-scibian
+Vcs-Git: https://github.com/scibian/edc-scibian.git
 Build-Depends: debhelper (>= 12)
 Standards-Version: 4.3.0
 

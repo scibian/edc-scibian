@@ -34,6 +34,7 @@ ARCHITECTURE="${ARCHITECTURE:-amd64}"
 #INSTALLDIR_CANDIDATES="${INSTALLDIR_CANDIDATES:-/local01 /local00}"
 INSTALLDIR_CANDIDATES="${INSTALLDIR_CANDIDATES:-/local00}"
 MIRROR="${MIRROR:-http://scibian.org/repo/}"
+keyring="/etc/apt/trusted.gpg"
 
 # DEPRECATED: DEBIAN_MIRROR; use *_MIRROR_URL instead
 DEBIAN_MIRROR="${DEBIAN_MIRROR:-http://ftp.fr.debian.org}"
@@ -81,7 +82,7 @@ done
 LOCAL=
 # Pas encore d'EDC d'installé
 for location in ${INSTALLDIR_CANDIDATES}; do
-    if [ -d "$location" ] && mountpoint -q "$location"; then
+    if [ -d "$location" ] ; then
 	location_size="$(LC_ALL=C /bin/df -k -P "$location" | awk '!/Avail/ {print $4}')"
 	if [ "$location_size" -gt ${SPACE_NEEDED} ]; then
 	    LOCAL="$location"
@@ -169,6 +170,13 @@ cat >> ${TARGET}/etc/apt/sources.list << EOF
 deb ${SCIBIAN_MIRROR_URL} ${VERSION} main contrib non-free
 EOF
 
+configure_keyring() {
+    cp -a $1 ${TARGET}/etc/apt/trusted.gpg.d/edc-scibian-keyring.gpg
+    in_edc apt-get update >> ${LOGFILE} 2>&1
+    unlink ${TARGET}/etc/apt/trusted.gpg.d/edc-scibian-keyring.gpg
+}
+
+configure_keyring $keyring
 
 echo " Mise à jour de l'edc..."
 
