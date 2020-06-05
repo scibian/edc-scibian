@@ -161,19 +161,33 @@ cp -a /usr/share/edc-base/apt.preferences ${TARGET}/etc/apt/preferences.d/00scib
 # BEWARE of the typo:
 touch ${TARGET}/edc-bootrap-in-progress
 
-cat > ${TARGET}/etc/apt/sources.list << EOF
+if [ ${SCHROOT_NAME} = "devel-testing" ] ; then
+  cat > ${TARGET}/etc/apt/sources.list << EOF
+deb ${DEBIAN_MIRROR_URL} ${DEBIAN_DISTRIBUTION} main contrib non-free
+deb ${DEBIAN_MIRROR_URL} ${DEBIAN_DISTRIBUTION}-updates main contrib non-free
+EOF
+else
+  cat > ${TARGET}/etc/apt/sources.list << EOF
 deb ${DEBIAN_MIRROR_URL} ${DEBIAN_DISTRIBUTION} main contrib non-free
 deb ${DEBIAN_SEC_MIRROR_URL} ${DEBIAN_DISTRIBUTION}/updates main contrib non-free
 EOF
 
-cat >> ${TARGET}/etc/apt/sources.list << EOF
+  if [ $VERSION = "scibian8" ]; then
+    cat >> ${TARGET}/etc/apt/sources.list << EOF
+deb ${SCIBIAN_MIRROR_URL} ${VERSION} main
+EOF
+  else
+  cat >> ${TARGET}/etc/apt/sources.list << EOF
 deb ${SCIBIAN_MIRROR_URL} ${VERSION} main contrib non-free
 EOF
+  fi
+fi
+
+
 
 configure_keyring() {
     cp -a $1 ${TARGET}/etc/apt/trusted.gpg.d/edc-scibian-keyring.gpg
     in_edc apt-get update >> ${LOGFILE} 2>&1
-    unlink ${TARGET}/etc/apt/trusted.gpg.d/edc-scibian-keyring.gpg
 }
 
 configure_keyring $keyring

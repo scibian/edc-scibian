@@ -1,3 +1,11 @@
+edc-scibian (10.0.2) buster; urgency=medium
+
+  * Change on installer's source.list
+  * Fix devel-testing repo
+  * Installer : remove the unlink on scibian repo gpg
+
+ -- Scibian Packaging Team <packaging@scibian.org>  Fri, 05 Jun 2020 15:41:13 +0200
+
 edc-scibian (10.0.1) buster; urgency=medium
 
   * Add gpg key for Scibian repositorie
