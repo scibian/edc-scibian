@@ -170,19 +170,9 @@ else
   cat > ${TARGET}/etc/apt/sources.list << EOF
 deb ${DEBIAN_MIRROR_URL} ${DEBIAN_DISTRIBUTION} main contrib non-free
 deb ${DEBIAN_SEC_MIRROR_URL} ${DEBIAN_DISTRIBUTION}/updates main contrib non-free
-EOF
-
-  if [ $VERSION = "scibian8" ]; then
-    cat >> ${TARGET}/etc/apt/sources.list << EOF
 deb ${SCIBIAN_MIRROR_URL} ${VERSION} main
 EOF
-  else
-  cat >> ${TARGET}/etc/apt/sources.list << EOF
-deb ${SCIBIAN_MIRROR_URL} ${VERSION} main contrib non-free
-EOF
-  fi
 fi
-
 
 
 configure_keyring() {
