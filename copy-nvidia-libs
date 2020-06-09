@@ -30,34 +30,24 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-if [ `dpkg -l | grep nvidia | grep nonglvnd` ]; then
-	libGL=
-	for dir in $LIB_DIRS; do
-	    _libGL="/usr/lib/$dir/libGL.so.1"
-	    if [ -f "$_libGL" ]; then
-		libGL="$_libGL"
-	    fi
-	done
+libGL=
+for dir in $LIB_DIRS; do
+    _libGL="/usr/lib/$dir/libGL.so.1"
+    if [ -f "$_libGL" ]; then
+	libGL="$_libGL"
+    fi
+done
 
-	if [ -z "$libGL" ]; then
-	    echo "error: could not find libGL.so.1" >&2
-	    exit 1
-	fi
-
-	# follow link to find out what is the real lib providing libGL.so.1
-	# then find the subdir containing the nvidia libs
-	rel_libGL_dir="$(dirname "$libGL")"
-	libGL_dir="$(dirname "$(readlink -f "$libGL")")"
-	nvidia_private="${libGL_dir#$rel_libGL_dir/}"
-else
-        # Find nvidia folder
-        libGLX_nvidia="/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.0"
-        rel_libGLX_dir="$(dirname "$libGLX_nvidia")"
-        libGLX_dir="$(dirname "$(readlink -f "$libGLX_nvidia")")"
-        nvidia_private="${libGLX_dir#$rel_libGLX_dir/}"
-        libGL_dir=$libGLX_dir
+if [ -z "$libGL" ]; then
+    echo "error: could not find libGL.so.1" >&2
+    exit 1
 fi
 
+# follow link to find out what is the real lib providing libGL.so.1
+# then find the subdir containing the nvidia libs
+rel_libGL_dir="$(dirname "$libGL")"
+libGL_dir="$(dirname "$(readlink -f "$libGL")")"
+nvidia_private="${libGL_dir#$rel_libGL_dir/}"
 
 case $nvidia_private in
     nvidia/*)
@@ -84,7 +74,7 @@ case $pkgs_list in
 esac
 
 # Add needed packages containing lib outside nvidia folder
-pkgs_list="$(echo "$pkgs_list libnvidia-legacy-390xx-glcore:amd64 ")"
+pkgs_list="$(echo "$pkgs_list libnvidia-glcore:amd64 libnvidia-compiler:amd64 libnvidia-eglcore:amd64 libnvidia-fatbinaryloader:amd64 libglvnd0:amd64")"
 
 for pkg in $pkgs_list; do
     dpkg -L $pkg | while read file; do
@@ -121,44 +111,4 @@ for pkg in $pkgs_list; do
     done
     # This is always needed
     printf "mkdir -p '%s//usr/lib/nvidia/edc'\n" "$CHROOT_PATH"
-done | sort -u | sort -r
-
-# Packages linked to GLVND
-pkg_glvnd_list="$(echo "libgl1:i386 libgl1:amd64 libglx0:amd64 libglx0:i386 libglvnd0:i386 libglvnd0:amd64")"
-for pkg in $pkg_glvnd_list; do
-    dpkg -L $pkg | while read file; do
-	case $file in
-	    /usr/lib/*)
-		if ! [ -f "$file" ]; then
-		    continue
-		fi
-
-		dest="$file"
-
-		if $multiarch_dest; then
-		    # Transform it into a multi-arch path, if needed
-		    if echo "$dest" | grep -vqE '^/usr/lib/[a-z0-9_]+-[a-z0-9_]+-[a-z0-9_]+/'; then
-			dest="/usr/lib/x86_64-linux-gnu/${dest#/usr/lib/}"
-		    fi
-		else
-		    # Transform it into a mono-arch path, if needed
-		    if echo "$dest" | grep -qE '^/usr/lib/[a-z0-9_]+-[a-z0-9_]+-[a-z0-9_]+/'; then
-			dest="/usr/lib/${dest#/usr/lib/*-*-*/}"
-		    fi
-		fi
-
-		dest="$CHROOT_PATH/${dest}"
-		dest_dir="$(dirname "$dest")/nvidia/glvnd/"
-		dest="$dest_dir/$(basename $dest)"
-
-		printf "mkdir -p '%s'\n" "$dest_dir"
-		printf "copy_host_files '%s' '%s' '%s'\n" "$(basename "$file")" "$(dirname "$file")" "$(dirname "$dest")"
-	    ;;
-	    *)
-		: ignore
-	    ;;
-	esac
-    done
-    # This is always needed
-    printf "mkdir -p '%s//usr/lib/nvidia/glvnd'\n" "$CHROOT_PATH"
 done | sort -u | sort -r

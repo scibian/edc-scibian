@@ -12,9 +12,10 @@ fi
 
 if ! [ -f "$edc_fstab" ]; then
     new_fstab="$edc_fstab".new
-    cp /etc/schroot/compat-scibian9/mount "$new_fstab"
+    cp /etc/schroot/compat-scibian10/mount "$new_fstab"
 
     {
+	bind_ifexists /scratch
 	bind_ifexists /run/gdm3
 	bind_ifexists /run/cups
 	bind_ifexists /var/run/utmp

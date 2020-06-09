@@ -1,0 +1,10 @@
+#!/bin/sh
+
+COPYFILES="/etc/schroot/compat-scibian10/copyfiles"
+SBUILD="false"
+NSSDATABASES="/etc/schroot/edc/nssdatabases"
+
+for i in /usr/share/edc-scibian/config/compat-scibian10.d/*
+do
+    . $i
+done

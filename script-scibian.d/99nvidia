@@ -65,77 +65,77 @@ if [ $STAGE = "setup-start" ] && [ "$(basename "$0")" = "99check" ]; then
 	    touch "$nvidia_flagd/update"
 	fi
 
-	APT_TOLERANCE=tolerant_apt
+	APT_TOLERANCE=intolerant_apt
+	if ! install_pkg glx-alternative-nvidia; then
+	    warn "failed to install glx-alternative-nvidia"
+	    APT_TOLERANCE=tolerant_apt
+	else
+	    APT_TOLERANCE=tolerant_apt
 
-	rm -rf "$CHROOT_PATH/usr/lib/nvidia/edc"
-	rm -rf "$CHROOT_PATH/usr/lib/x86_64-linux-gnu/nvidia/edc"
-	rm -rf "$CHROOT_PATH/usr/lib/i386-linux-gnu/nvidia/edc"
+	    rm -rf "$CHROOT_PATH/usr/lib/nvidia/edc"
+	    rm -rf "$CHROOT_PATH/usr/lib/x86_64-linux-gnu/nvidia/edc"
+	    rm -rf "$CHROOT_PATH/usr/lib/i386-linux-gnu/nvidia/edc"
 
-	cnl_options='--multiarch-target'
+	    cnl_options='--multiarch-target'
 
-	# Copy the libraries
-	if ! install_cmds="$(/usr/share/edc-base/copy-nvidia-libs $cnl_options)"; then
-	    fatal "failed to find the NVIDIA libraries to be copied"
-	fi
-
-	eval "$install_cmds"
-
-	# nvidia-alternatives handling
-	# paths relative to the EDC
-	edc_rel_alt_scriptd="/usr/share/edc-scibian"
-	edc_rel_alt_script="$edc_rel_alt_scriptd/nvidia-alternative"
-	# paths relative to our rootfs
-	edc_alt_scriptd="$CHROOT_PATH/$edc_rel_alt_scriptd"
-	edc_alt_script="$CHROOT_PATH/$edc_rel_alt_script"
-
-	# Remove the current alternatives
-	if [ -x "$edc_alt_script" ]; then
-	    chroot "$CHROOT_PATH" "$edc_rel_alt_script" remove
-	fi
-
-	found_candidate=false
-	info "looking for $edc_name $edc_version"
-	for candidate in $edc_name $edc_version; do
-	    alt_script="/usr/share/edc-scibian/config/nvidia/$candidate"
-
-	    if ! [ -f "$alt_script" ]; then
-		continue
+	    # Copy the libraries
+	    if ! install_cmds="$(/usr/share/edc-base/copy-nvidia-libs $cnl_options)"; then
+		fatal "failed to find the NVIDIA libraries to be copied"
 	    fi
 
-	    # cleanup the old libGL libs before setting up with update-alternative
-	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/lib/x86_64-linux-gnu/libGL.so*'
-	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/lib/i386-linux-gnu/libGL.so*'
-	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/lib/x86_64-linux-gnu/libGLdispatch.so*'
+	    eval "$install_cmds"
 
-	    mkdir -p "$edc_alt_scriptd"
-	    cp -a "$alt_script" "$edc_alt_script"
-	    chmod +x "$edc_alt_script"
-	    chroot "$CHROOT_PATH" "$edc_rel_alt_script"
-	    found_candidate=true
-	    break
-	done
+	    # nvidia-alternatives handling
+	    # paths relative to the EDC
+	    edc_rel_alt_scriptd="/usr/share/edc-scibian"
+	    edc_rel_alt_script="$edc_rel_alt_scriptd/nvidia-alternative"
+	    # paths relative to our rootfs
+	    edc_alt_scriptd="$CHROOT_PATH/$edc_rel_alt_scriptd"
+	    edc_alt_script="$CHROOT_PATH/$edc_rel_alt_script"
 
-	    # convert libGLdispatch.so.0 to link
-	    [ -f $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0 ] && \
-		    [ -f $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0 ] && \
-		    ln -sf /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0 $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0 && \
-		    ln -sf /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0 $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so
-	
-	# Make sure the triggers are executed:
-	chroot "$CHROOT_PATH" /bin/sh -c 'dpkg --triggers-only --pending'
+	    # Remove the current alternatives
+	    if [ -x "$edc_alt_script" ]; then
+		chroot "$CHROOT_PATH" "$edc_rel_alt_script" remove
+	    fi
 
-	# Useless actually ? 
-	# chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/local/lib/x86_64-linux-gnu/libnvidia-*.so*'
-	# chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/local/lib/i386-linux-gnu/libnvidia-*.so*'
+	    found_candidate=false
+	    info "looking for $edc_name $edc_version"
+	    for candidate in $edc_name $edc_version; do
+		alt_script="/usr/share/edc-scibian/config/nvidia/$candidate"
 
-	ln -sf /usr/lib/x86_64-linux-gnu/libGL.so.1 $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGL.so
+		if ! [ -f "$alt_script" ]; then
+		    continue
+		fi
 
-	chroot "$CHROOT_PATH" /sbin/ldconfig || :
+		mkdir -p "$edc_alt_scriptd"
+		cp -a "$alt_script" "$edc_alt_script"
+		chmod +x "$edc_alt_script"
+		chroot "$CHROOT_PATH" "$edc_rel_alt_script"
+		found_candidate=true
+		break
+	    done
 
-	if $found_candidate; then
-	    touch "$nvidia_flagd/$edc_name"
-	else
-	    fatal "could not find NVIDIA alternatives script"
+		# convert libGLdispatch.so.0 to link
+		[ -f $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0 ] && \
+			[ -f $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0 ] && \
+			ln -sf /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0 $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0 && \
+			ln -sf /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0 $CHROOT_PATH/usr/lib/x86_64-linux-gnu/libGLdispatch.so
+	    # Make sure the triggers are executed:
+	    chroot "$CHROOT_PATH" /bin/sh -c 'dpkg --triggers-only --pending'
+
+	    # cleanup the old libGL libs
+	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/local/lib/x86_64-linux-gnu/libGL.so*'
+	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/local/lib/x86_64-linux-gnu/libnvidia-*.so*'
+	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/local/lib/i386-linux-gnu/libGL.so*'
+	    chroot "$CHROOT_PATH" /bin/sh -c 'rm -f /usr/local/lib/i386-linux-gnu/libnvidia-*.so*'
+
+	    chroot "$CHROOT_PATH" /sbin/ldconfig || :
+
+	    if $found_candidate; then
+		touch "$nvidia_flagd/$edc_name"
+	    else
+		fatal "could not find NVIDIA alternatives script"
+	    fi
 	fi
     fi > "$nvidia_lock/nvidia.$edc_name"
     set +u

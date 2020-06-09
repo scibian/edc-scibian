@@ -4,8 +4,8 @@ Priority: extra
 Maintainer: Scibian Project <packaging@scibian.org>
 Vcs-Browser: https://github.com/scibian/edc-scibian
 Vcs-Git: https://github.com/scibian/edc-scibian.git
-Build-Depends: debhelper (>= 12)
-Standards-Version: 4.3.0
+Build-Depends: debhelper (>= 10)
+Standards-Version: 4.1.0
 
 Package: edc-base
 Architecture: amd64
@@ -29,12 +29,12 @@ Description: Development environment for Scibian 8
  This compatibility environment allows to build an application
  for Scibian 8 on another operating system.
 
-Package: compat-scibian9
+Package: compat-scibian10
 Architecture: amd64
 Depends: edc-base (>= ${binary:Version}), ${misc:Depends}
-Description: Compatibility environment for Scibian 9
+Description: Compatibility environment for Scibian 10
  This compatibility environment allows to run an application
- designed for Scibian 9 on another operating system.
+ designed for Scibian 10 on another operating system.
 
 Package: devel-scibian9
 Architecture: amd64

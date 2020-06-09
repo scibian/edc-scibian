@@ -1,0 +1,10 @@
+/usr/share/edc-base/run-cron                     /etc/cron.daily/compat-scibian10_apt-compat
+/usr/share/edc-base/run-cron                     /etc/cron.daily/compat-scibian10_logrotate
+/usr/share/edc-base/run-in-edc                   /usr/bin/compat-scibian10
+/usr/share/edc-scibian/config/99nvidia           /usr/share/edc-scibian/config/compat-scibian10.d/1010nvidia
+/usr/share/edc-scibian/config/10lazy-unmount     /usr/share/edc-scibian/config/compat-scibian10.d/10lazy-unmount
+/usr/share/edc-scibian/config/20sync-edc-files   /usr/share/edc-scibian/config/compat-scibian10.d/20sync-edc-files
+/usr/share/edc-scibian/config/20install-pkgs     /usr/share/edc-scibian/config/compat-scibian10.d/20install-pkgs
+/usr/share/edc-scibian/config/14waitforprocs     /usr/share/edc-scibian/config/compat-scibian10.d/14waitforprocs
+/usr/share/edc-scibian/config/30key-acl-for-apt  /usr/share/edc-scibian/config/compat-scibian10.d/30key-acl-for-apt
+/usr/share/edc-scibian/config/40localtime        /usr/share/edc-scibian/config/compat-scibian10.d/40localtime

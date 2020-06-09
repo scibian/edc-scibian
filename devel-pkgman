@@ -166,7 +166,7 @@ if [ "$action" != list ]; then
     while [ $# -gt 0 ]; do
 	package="${1:-}"
 	printf %s "$package" |
-	if ! grep -Eq '^[a-zA-Z0-9][a-zA-Z0-9.+-]+$'; then
+	if ! grep -Eq '^[a-zA-Z0-9][a-zA-Z0-9.+:-]+$'; then
 	    echo "error : please specify a package" >&2
 	    exit 1
 	fi

@@ -4,7 +4,7 @@ set -e
 #DEBHELPER#
 
 EDC_TYPE=compat
-VERSION=scibian9
+VERSION=scibian10
 
 export EDC_TYPE VERSION
 

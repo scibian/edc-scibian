@@ -4,8 +4,8 @@ set -e
 #DEBHELPER#
 
 EDC_TYPE=compat
-VERSION=scibian9
-DESCRIPTION="$EDC_TYPE Scibian 9"
+VERSION=scibian10
+DESCRIPTION="$EDC_TYPE Scibian 10"
 DEBIAN_DISTRIBUTION=stretch
 # Installed size + size of downloads
 SPACE_NEEDED=$((5500000+(2*1000*1000)))

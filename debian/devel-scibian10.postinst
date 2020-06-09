@@ -13,6 +13,13 @@ INSTALL_MINUTES=20
 
 export EDC_TYPE VERSION DESCRIPTION DEBIAN_DISTRIBUTION SPACE_NEEDED INSTALL_MINUTES
 
+# /dev/dri is only present if X is installed.
+# No need to mount that folder on a server.
+if [ ! -d /dev/dri ]; then
+      sed -i '/dri/d' /etc/schroot/${EDC_TYPE}-${VERSION}/mount
+fi
+
+
 # S10 : A verifier la pertinence de cette ligne
 # Modification temporaire pour résorber le problème apt sur devel-scibian9 (#4148)
 # [ -f /etc/cron.daily/devel-scibian9_apt ] && unlink /etc/cron.daily/devel-scibian9_apt
